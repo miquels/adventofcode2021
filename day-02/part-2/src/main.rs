@@ -2,32 +2,21 @@
 
 use std::io::{self, BufRead};
 
-#[derive(Default)]
-struct SubMarine {
-    hpos: i32,
-    depth: i32,
-    aim: i32,
-}
-
 fn main() {
     let pos = io::stdin()
         .lock()
         .lines()
         .map(|line| line.unwrap())
-        .fold(SubMarine::default(), |mut s, line| {
+        .fold((0i32, 0i32, 0i32), |s, line| {
             let mut i = line.split_whitespace();
             let dir = i.next().unwrap();
             let val: i32 = i.next().unwrap().parse().unwrap();
             match dir {
-                "forward" => {
-                    s.hpos += val;
-                    s.depth += s.aim  * val;
-                },
-                "down" => s.aim += val,
-                "up" => s.aim -= val,
+                "forward" => (s.0 + val, s.1 + s.2 * val, s.2),
+                "down" => (s.0, s.1, s.2 + val),
+                "up" => (s.0, s.1, s.2 - val),
                 _ => unreachable!(),
-            };
-            s
+            }
         });
-    println!("{}", pos.hpos * pos.depth);
+    println!("{}", pos.0 * pos.1);
 }
