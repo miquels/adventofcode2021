@@ -1,16 +1,14 @@
 // cargo run < ../input/input.txt
 
 use std::io::{self, BufRead};
+use std::cmp::max;
 
-struct Floor([[i16; 1000]; 1000]);
+struct Floor(Vec<Vec<u16>>);
 
 impl Floor {
-    fn new() -> Floor {
-        Floor([[0i16; 1000]; 1000])
-    }
-
-    fn clear(&mut self) {
-        self.0.iter_mut().map(|y| y.iter_mut()).flatten().for_each(|e| *e = 0);
+    fn new(max_x: usize, max_y: usize) -> Floor {
+        let v = (0..max_y).map(|_| { let mut v = Vec::new(); v.resize(max_x, 0u16); v }).collect();
+        Floor(v)
     }
 
     fn draw(&mut self, line: &Line) {
@@ -58,12 +56,14 @@ fn main() {
         .lines()
         .map(|s| Line::parse(&s.unwrap()))
         .collect::<Vec<_>>();
+    let max_x = lines.iter().map(|l| max(l.x1, l.x2) as usize + 1).max().unwrap();
+    let max_y = lines.iter().map(|l| max(l.y1, l.y2) as usize + 1).max().unwrap();
 
-    let mut floor = Floor::new();
+    let mut floor = Floor::new(max_x, max_y);
     lines.iter().filter(|l| l.x1 == l.x2 || l.y1 == l.y2).for_each(|l| floor.draw(&l));
     println!("part 1: {}", floor.ndanger());
 
-    floor.clear();
+    floor = Floor::new(max_x, max_y);
     lines.iter().for_each(|l| floor.draw(&l));
     println!("part 2: {}", floor.ndanger());
 }
