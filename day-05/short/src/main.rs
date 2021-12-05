@@ -1,8 +1,7 @@
-use std::collections::HashMap;
 use scan_fmt::*;
 
 fn main() {
-    let mut floor = HashMap::<(i16, i16), i16>::default();
+    let mut floor = std::collections::HashMap::new();
     while let Ok(mut c) = scanln_fmt!("{},{} -> {},{}", i16, i16, i16, i16) {
         let (xd, yd) = ((c.2 - c.0).signum(), (c.3 - c.1).signum());
         while {
