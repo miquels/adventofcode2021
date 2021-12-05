@@ -8,5 +8,6 @@ members = [
   "day-03/part-2",
   "day-04/part-1",
   "day-04/part-2",
-  "day-05",
+  "day-05/idiomatic",
+  "day-05/short",
 ]
