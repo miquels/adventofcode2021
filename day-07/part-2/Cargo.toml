@@ -3,3 +3,6 @@ name = "day-07-part-2"
 version = "0.1.0"
 authors = ["Miquel van Smoorenburg <mike@langeraar.net>"]
 edition = "2018"
+
+[dependencies]
+aoclib = { version = "0.1", path = "../../aoclib" }
