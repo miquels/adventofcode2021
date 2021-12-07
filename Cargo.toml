@@ -1,5 +1,6 @@
 [workspace]
 members = [
+  "aoclib",
   "day-01/part-1",
   "day-01/part-2",
   "day-02/part-1",
