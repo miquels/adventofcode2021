@@ -3,6 +3,8 @@ use std::error::Error;
 use std::io::{self, Error as IoError, ErrorKind};
 use std::str::FromStr;
 
+/// Poor man's version of `anyhow::Result`. Good enough for
+/// most cases, anyhow.
 pub type Result<T, E = Box<dyn Error + Send + Sync>> = std::result::Result<T, E>;
 
 /// Read one CSV line from stdin, interpret all fields as `T`.
