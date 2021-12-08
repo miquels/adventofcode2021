@@ -18,4 +18,5 @@ members = [
   "day-07/part-1",
   "day-08/part-1",
   "day-08/part-2",
+  "day-08/part-2-no-bruteforce",
 ]
