@@ -24,19 +24,11 @@ fn map_digit(digit: &[u8], mapping: &[u8]) -> i64 {
 }
 
 fn decode_digits(samples: &[Vec<u8>], digits: &[Vec<u8>], mappings: &[Vec<u8>]) -> u64 {
-
-'LOOP:
     for mapping in mappings {
-        for digit in samples {
-            if map_digit(&digit, mapping) < 0 {
-                continue 'LOOP;
-            }
+        if !samples.iter().all(|d| map_digit(&d, mapping) >= 0) {
+            continue;
         }
-        let mut n = 0;
-        for digit in digits.iter() {
-            n = n * 10 + map_digit(digit, mapping) as u64;
-        }
-        return n;
+        return digits.iter().fold(0, |n, d| n * 10 + map_digit(d, mapping) as u64);
     }
     unreachable!()
 }
