@@ -2,31 +2,25 @@ use std::io::{self, BufRead};
 
 fn decode_digits(patterns: &[u8], digits: &[u8]) -> u16 {
     let mut map = [0u8; 10];
-    let mut rmap = std::collections::HashMap::<u8, u8>::new();
+    let mut patterns = patterns.to_vec();
+    patterns.sort_by(|a, b| a.count_ones().partial_cmp(&b.count_ones()).unwrap());
     for p in patterns.iter() {
         let n = match p.count_ones() {
             2 => 1,
-            4 => 4,
             3 => 7,
-            7 => 8,
-            _ => continue,
-        };
-        rmap.insert(*p, n);
-        map[n as usize] = *p;
-    }
-    for p in patterns.iter() {
-        let n = match p.count_ones() {
+            4 => 4,
             5 if (*p & map[4]).count_ones() == 2 => 2,
             5 if (*p & map[7]).count_ones() == 3 => 3,
             5 => 5,
             6 if (*p & map[4]).count_ones() == 4 => 9,
             6 if (*p & map[7]).count_ones() == 3 => 0,
             6 => 6,
+            7 => 8,
             _ => continue,
         };
-        rmap.insert(*p, n);
+        map[n as usize] = *p;
     }
-    digits.iter().fold(0u16, |n, d| n * 10 + rmap[d] as u16)
+    digits.iter().fold(0u16, |n, &d| n * 10 + map.iter().position(|&v| v == d).unwrap() as u16)
 }
 
 fn main() {
