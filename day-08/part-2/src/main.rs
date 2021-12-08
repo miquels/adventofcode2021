@@ -23,7 +23,7 @@ fn map_digit(digit: &[u8], mapping: &[u8]) -> i64 {
     }
 }
 
-fn decode_digits(samples: &[Vec<u8>], digits: &[Vec<u8>], mappings: &[Vec<u8>]) -> u64 {
+fn decode_digits(samples: &[&[u8]], digits: &[&[u8]], mappings: &[Vec<u8>]) -> u64 {
     for mapping in mappings {
         if !samples.iter().all(|d| map_digit(&d, mapping) >= 0) {
             continue;
@@ -38,14 +38,7 @@ fn main() {
 
     let result = io::stdin().lock().lines().map(|line| {
         let line = line.unwrap();
-        let w = line
-            .split_whitespace()
-            .map(|s| {
-                let mut v = s.as_bytes().to_vec();
-                v.sort();
-                v
-            })
-            .collect_vec();
+        let w = line.split_whitespace().map(|s| s.as_bytes()).collect_vec();
         decode_digits(&w[0..10], &w[11..15], &mappings) as u64
     }).sum::<u64>();
     println!("{}", result);
