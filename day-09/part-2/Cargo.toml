@@ -1,0 +1,5 @@
+[package]
+name = "day-09-part-2"
+version = "0.1.0"
+authors = ["Miquel van Smoorenburg <mike@langeraar.net>"]
+edition = "2018"
