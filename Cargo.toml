@@ -23,4 +23,5 @@ members = [
   "day-09/part-2",
   "day-10/part-1",
   "day-10/part-2",
+  "day-10/part-2-golf",
 ]
