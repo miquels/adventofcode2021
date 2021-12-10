@@ -26,5 +26,5 @@ that value into a flag, `z`, and at the end of the loop we can check if
 
 Then if `z==0` we can walk over the remaining bytes in the `Vec`.
 To calculate the score we need to map (,<,[,} to 1, 2, 3, 4.
-With some bitfiddling this can be achieved: `((x + 96 * ((x & 4) / 4)) >> 5)`.
+With some bitfiddling this can be achieved: `((x + 24 * (x & 4)) >> 5)`.
 
