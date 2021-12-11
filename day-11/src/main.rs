@@ -23,11 +23,11 @@ impl Cave {
     }
 
     fn around(&self, x: usize, y: usize) -> impl Iterator<Item=(usize, usize)> {
-        let (max_x, max_y) = (self.max_x, self.max_y);
+        let (x, y, max_x, max_y) = (x as i32, y as i32, self.max_x as i32, self.max_y as i32);
         (-1..=1).map(|dy| (-1..=1).map(move |dx| (dx, dy))).flatten()
-            .filter(|&(dx, dy)| dx !=0 || dy != 0)
-            .map(move |(dx, dy)| (x as i32 + dx, y as i32 + dy))
-            .filter(move |&(x, y)| x >= 0 && x <= max_x as i32 && y >= 0 && y <= max_y as i32)
+            .filter(|(dx, dy)| *dx !=0 || *dy != 0)
+            .map(move |(dx, dy)| (x + dx, y + dy))
+            .filter(move |(x, y)| (0..=max_x).contains(x) && (0..=max_y).contains(y))
             .map(|(x, y)| (x as usize, y as usize))
     }
 
