@@ -8,18 +8,18 @@ struct Cave {
 }
 
 impl Cave {
-    fn new() -> Cave {
+    fn read_from_stdin() -> io::Result<Cave> {
         let dumbos = io::stdin()
             .lock()
             .lines()
-            .map(|line| line.unwrap().chars().map(|c| c as u8 - b'0').collect::<Vec<_>>())
-            .collect::<Vec<_>>();
-        Cave {
+            .map(|line| line.map(|l| l.bytes().map(|c| c - b'0').collect::<Vec<_>>()))
+            .collect::<io::Result<Vec<_>>>()?;
+        Ok(Cave {
             max_x: dumbos[0].len() - 1,
             max_y: dumbos.len() - 1,
             num_dumbos: (dumbos[0].len() * dumbos.len()) as u32,
             dumbos,
-        }
+        })
     }
 
     fn around(&self, x: usize, y: usize) -> impl Iterator<Item=(usize, usize)> {
@@ -63,8 +63,8 @@ impl Cave {
     }
 }
 
-fn main() {
-    let mut cave = Cave::new();
+fn main() -> io::Result<()> {
+    let mut cave = Cave::read_from_stdin()?;
     let mut solved = 0;
     let mut flashes = 0;
 
@@ -83,4 +83,6 @@ fn main() {
             break;
         }
     }
+
+    Ok(())
 }
