@@ -37,12 +37,13 @@ impl Cave {
     }
 
     fn flash(&mut self, x: usize, y: usize) -> u32 {
-        self.dumbos[y][x] |= 128;
+        self.dumbos[y][x] += 1;
         self.around(x, y)
             .filter_map(|(x, y)| {
-                self.dumbos[y][x] += 1;
-                let l = self.dumbos[y][x];
-                (l >= 10 && l < 128).then(|| self.flash(x, y))
+                if self.dumbos[y][x] < 10 {
+                    self.dumbos[y][x] += 1;
+                }
+                (self.dumbos[y][x] == 10).then(|| self.flash(x, y))
             })
             .sum::<u32>() + 1
     }
@@ -56,8 +57,7 @@ impl Cave {
         });
         self.iter_xy()
             .filter_map(|(x, y)| {
-                let l = self.dumbos[y][x];
-                (l >= 10 && l < 128).then(|| self.flash(x, y))
+                (self.dumbos[y][x] == 10).then(|| self.flash(x, y))
             })
             .sum::<u32>()
     }
