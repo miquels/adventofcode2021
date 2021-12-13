@@ -34,7 +34,7 @@ impl Map {
         map
     }
 
-    fn explore(&self, name: &str, twice: bool, mut visited: HashSet<String>) -> u32 {
+    fn explore(&self, name: &str, twice_ok: bool, mut visited: HashSet<String>) -> u32 {
         if name == "end" {
             return 1;
         }
@@ -44,14 +44,10 @@ impl Map {
         }
         let mut paths = 0;
         for next in &cave.next {
-            let mut twice = twice;
-            if visited.contains(next) {
-                if !twice {
-                    continue;
-                }
-                twice = false;
+            let beenthere = visited.contains(next);
+            if !beenthere || twice_ok {
+                paths += self.explore(next, twice_ok && !beenthere, visited.clone());
             }
-            paths += self.explore(next, twice, visited.clone());
         }
         paths
     }
