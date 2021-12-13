@@ -8,34 +8,19 @@ struct Paper {
 type Cmds = Vec<(char, i16)>;
 
 impl Paper {
-    fn max_xy(&self) -> [i16; 2] {
-        let max_x = self.dots.iter().map(|c| c[0]).max().unwrap();
-        let max_y = self.dots.iter().map(|c| c[1]).max().unwrap();
-        [max_x, max_y]
-    }
-
     fn fold(&mut self, axis: char, apos: i16) {
         let axis = (axis == 'y') as usize;
-        let max = self.max_xy()[axis];
-        let off = std::cmp::max(max - apos, apos);
         self.dots = self.dots
             .drain()
-            .filter(|&[x, y]| x != y)
-            .map(|mut c| {
-                match c[axis] < apos {
-                    true => c[axis] = c[axis] - apos + off,
-                    false => c[axis] = apos - c[axis] + off,
-                }
-                c
-            })
+            .map(|mut c| { if c[axis] > apos { c[axis] = 2 * apos - c[axis] } c })
             .collect();
     }
 
     fn show(&self) {
-        let max_xy = self.max_xy();
-        for y in 0..=max_xy[1] {
+        let max = |axis| self.dots.iter().map(|c| c[axis]).max().unwrap();
+        for y in 0..=max(1) {
             let mut s = String::new();
-            for x in 0 ..=max_xy[0] {
+            for x in 0 ..=max(0) {
                 s.push(self.dots.contains(&[x, y]).then(|| '#').unwrap_or(' '));
             }
             println!("{}", s);
