@@ -6,19 +6,9 @@ use scan_fmt::*;
 struct Paper {
     dots: HashSet<[i16; 2]>,
 }
+type Cmds = Vec<(char, i16)>;
 
 impl Paper {
-    fn read_dots() -> Paper {
-        let mut dots = HashSet::new();
-        for line in io::stdin().lock().lines().flatten() {
-            if line == "" {
-                break;
-            }
-            dots.insert(scan_fmt!(&line, "{},{}", i16, i16).map(|c| [c.0, c.1]).unwrap());
-        }
-        Paper { dots }
-    }
-
     fn max_xy(&self) -> [i16; 2] {
         let max_x = self.dots.iter().map(|c| c[0]).max().unwrap();
         let max_y = self.dots.iter().map(|c| c[1]).max().unwrap();
@@ -28,15 +18,15 @@ impl Paper {
     fn fold(&mut self, axis: char, apos: i16) {
         let axis = (axis == 'y') as usize;
         let max = self.max_xy()[axis];
-        let off = std::cmp::max(max - apos, apos) - 1;
+        let off = std::cmp::max(max - apos, apos);
         self.dots = self.dots
             .drain()
             .filter_map(|mut c| {
                 if c[axis] < apos {
-                    c[axis] = c[axis] - apos + 1 + off;
+                    c[axis] = c[axis] - apos + off;
                     Some(c)
                 } else if c[axis] > apos {
-                    c[axis] = apos + 1 - c[axis] + off;
+                    c[axis] = apos - c[axis] + off;
                     Some(c)
                 } else {
                     None
@@ -57,18 +47,17 @@ impl Paper {
     }
 }
 
-fn read_commands() -> Vec<(char, i16)> {
-    let mut cmds = Vec::new();
+fn read() -> (Paper, Cmds) {
+    let (mut dots, mut cmds) = (HashSet::new(), Vec::new());
     for line in io::stdin().lock().lines().flatten() {
-        cmds.push(scan_fmt!(&line, "fold along {}={}", char, i16).unwrap());
+        let _ = scan_fmt!(&line, "{},{}", i16, i16).map(|c| dots.insert([c.0, c.1]));
+        let _ = scan_fmt!(&line, "fold along {}={}", char, i16).map(|c| cmds.push(c));
     }
-    cmds
+    (Paper { dots }, cmds)
 }
 
 fn main() {
-    let mut paper = Paper::read_dots();
-    let cmds = read_commands();
-
+    let (mut paper, cmds) = read();
     for (i, cmd) in cmds.iter().enumerate() {
         paper.fold(cmd.0, cmd.1);
         if i == 0 {
