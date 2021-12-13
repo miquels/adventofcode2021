@@ -2,7 +2,6 @@ use std::collections::HashSet;
 use std::io::{self, BufRead};
 use scan_fmt::*;
 
-#[derive(Default, Clone)]
 struct Paper {
     dots: HashSet<[i16; 2]>,
 }
