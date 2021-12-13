@@ -21,16 +21,13 @@ impl Paper {
         let off = std::cmp::max(max - apos, apos);
         self.dots = self.dots
             .drain()
-            .filter_map(|mut c| {
-                if c[axis] < apos {
-                    c[axis] = c[axis] - apos + off;
-                    Some(c)
-                } else if c[axis] > apos {
-                    c[axis] = apos - c[axis] + off;
-                    Some(c)
-                } else {
-                    None
+            .filter(|&[x, y]| x != y)
+            .map(|mut c| {
+                match c[axis] < apos {
+                    true => c[axis] = c[axis] - apos + off,
+                    false => c[axis] = apos - c[axis] + off,
                 }
+                c
             })
             .collect();
     }
