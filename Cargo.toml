@@ -27,4 +27,5 @@ members = [
   "day-11",
   "day-12/idiomatic",
   "day-12/golf",
+  "day-13",
 ]
