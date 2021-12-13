@@ -1,5 +1,5 @@
 [package]
-name = "day-12"
+name = "day-12-golf"
 version = "0.1.0"
 authors = ["Miquel van Smoorenburg <mike@langeraar.net>"]
 edition = "2018"
