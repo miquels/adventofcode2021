@@ -3,13 +3,14 @@ use scan_fmt::*;
 
 struct Rule {
     letter:     char,
-    pairs:      Vec<Vec<char>>,
+    pair1:      String,
+    pair2:      String,
 }
 
 struct Poly {
-    rules:      HashMap<Vec<char>, Rule>,
+    rules:      HashMap<String, Rule>,
     letters:    HashMap<char, u64>,
-    pairs:      HashMap<Vec<char>, u64>,
+    pairs:      HashMap<String, u64>,
 }
 
 impl Poly {
@@ -19,7 +20,7 @@ impl Poly {
 
         let mut pairs = HashMap::new();
         for p in line.chars().collect::<Vec<_>>().windows(2) {
-            *pairs.entry(p.to_vec()).or_insert(0) += 1;
+            *pairs.entry(String::from_iter(p)).or_insert(0) += 1;
         }
 
         let mut letters = HashMap::new();
@@ -29,9 +30,10 @@ impl Poly {
 
         let mut rules = HashMap::new();
         while let Ok((pair, letter)) = scanln_fmt!("{} -> {}", String, char) {
-            let pair = pair.chars().collect::<Vec<_>>();
+            let pairv = pair.chars().collect::<Vec<_>>();
             rules.insert(pair.clone(), Rule {
-                pairs:  vec![ vec![pair[0], letter], vec![letter, pair[1]] ],
+                pair1: String::from_iter([pairv[0], letter]),
+                pair2: String::from_iter([letter, pairv[1]]),
                 letter,
             });
         }
@@ -44,9 +46,8 @@ impl Poly {
         for (pair, value) in pairs.drain() {
             let rule = &self.rules[&pair];
             *self.letters.entry(rule.letter).or_insert(0) += value;
-            for p in &rule.pairs {
-                *self.pairs.entry(p.clone()).or_insert(0) += value;
-            }
+            *self.pairs.entry(rule.pair1.clone()).or_insert(0) += value;
+            *self.pairs.entry(rule.pair2.clone()).or_insert(0) += value;
         }
     }
 
