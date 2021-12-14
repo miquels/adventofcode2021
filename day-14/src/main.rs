@@ -52,10 +52,9 @@ impl Poly {
     }
 
     fn report(&self, step: usize) {
-        let mut letters = self.letters.iter().map(|(c, n)| (*c, *n)).collect::<Vec<_>>();
-        letters.sort_by(|a, b| a.1.cmp(&b.1));
-        let (first, last) = (letters[0], letters.last().unwrap());
-        println!("step {}: {:?} - {:?} = {}", step, last, first, last.1 - first.1);
+        let min = self.letters.iter().min_by_key(|l| l.1).unwrap();
+        let max = self.letters.iter().max_by_key(|l| l.1).unwrap();
+        println!("step {}: {:?} - {:?} = {}", step, max, min, max.1 - min.1);
     }
 }
 
