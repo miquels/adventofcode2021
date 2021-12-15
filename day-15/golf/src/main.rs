@@ -1,4 +1,4 @@
-use std::{collections::{HashSet as H,BinaryHeap as B,Vec as V},cmp::Reverse as R,io::{self, BufRead}};
+use std::{collections::{HashSet as H,BinaryHeap as B},vec::Vec as V,cmp::Reverse as R,io::{self,BufRead}};
 fn main() {
     let m=io::stdin().lock().lines().flatten().map(|l|l.bytes().map(|b|b as u16-48)
         .collect::<V<_>>()).collect::<V<_>>();let(lx,ly)=(m[0].len(),m.len());
