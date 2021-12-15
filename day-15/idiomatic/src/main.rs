@@ -1,59 +1,12 @@
-use std::time::Instant;
 use std::io::{self, BufRead};
-use pathfinding::prelude::dijkstra;
-
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-struct Pos {
-    x: u16,
-    y: u16,
-}
+use std::time::Instant;
 
 type Map = Vec<Vec<u16>>;
 
-fn map_from_stdin() -> Map {
-    io::stdin()
-        .lock()
-        .lines()
-        .flatten()
-        .map(|line| line.bytes().map(|b| (b - b'0') as u16).collect::<Vec<_>>())
-        .collect()
-}
-
-fn larger_map(map: &Map) -> Map {
-    let len_x = map[0].len();
-    let len_y = map.len();
-    let mut m = map.clone();
-    for y in 0..len_y*5 {
-        if m.len() <= y {
-            m.push(Vec::new());
-        }
-        m[y].resize(len_x * 5, 0);
-    }
-
-    for y in 0..5 {
-        for x in y..5 {
-            if x == 0 && y == 0 {
-                continue;
-            }
-            for y1 in 0..len_y {
-                for x1 in 0..len_x {
-                    let n = (m[y*len_y + y1][(x-1)*len_x + x1] % 9) + 1;
-                    m[y*len_y + y1][x*len_x + x1] = n;
-                    m[x*len_x + y1][y*len_y + x1] = n;
-                }
-            }
-        }
-    }
-    m
-}
-
-#[inline]
-fn around(map: &Map, p: Pos, max_x: usize, max_y: usize) -> impl Iterator<Item=(Pos, u16)> +'_ {
-    [(0, -1), (-1, 0), (1, 0), (0, 1)]
-        .iter()
-        .map(move |(dx, dy)| (p.x as i32 + dx, p.y as i32 + dy))
-        .filter(move |&(x, y)| x >= 0 && x <= max_x as i32 && y >= 0 && y <= max_y as i32)
-        .map(|(x, y)| (Pos { x: x as u16, y: y as u16 }, map[y as usize][x as usize]))
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+struct Pos {
+    x: usize,
+    y: usize,
 }
 
 struct PositionRisk {
@@ -81,69 +34,91 @@ impl PartialEq for PositionRisk {
 
 impl Eq for PositionRisk {}
 
-fn my_dijkstra(map: &Map) -> u16 {
+#[inline]
+fn neighbors(map: &Map, p: Pos, max_x: usize, max_y: usize) -> impl Iterator<Item = (Pos, u16)> + '_ {
+    let Pos { x, y } = p;
+    [
+        (y > 0).then(|| (x, y - 1)),
+        (x > 0).then(|| (x - 1, y)),
+        (x < max_x).then(|| (x + 1, y)),
+        (y < max_y).then(|| (x, y + 1)),
+    ]
+    .into_iter()
+    .flatten()
+    .map(|(x, y)| (Pos { x, y }, map[y][x]))
+}
+
+fn dijkstra(map: &Map) -> u16 {
     let max_x = map[0].len() - 1;
     let max_y = map.len() - 1;
 
-    let mut risks = (0 .. map.len()).map(|_| {
-        let mut row = Vec::new();
-        row.resize(map[0].len(), i32::MAX as u32);
-        row
-    }).collect::<Vec<_>>();
+    let mut risks = (0..map.len())
+        .map(|_| {
+            let mut row = Vec::new();
+            row.resize(map[0].len(), i32::MAX as u32);
+            row
+        })
+        .collect::<Vec<_>>();
     risks[0][0] = 0;
 
     let mut to_visit = std::collections::BinaryHeap::new();
-    to_visit.push(PositionRisk{ pos: Pos{ x: 0, y: 0 }, risk: 0 });
+    to_visit.push(PositionRisk {
+        pos: Pos { x: 0, y: 0 },
+        risk: 0,
+    });
 
-    while let Some(PositionRisk{ pos, risk}) = to_visit.pop() {
-        if (risks[pos.y as usize][pos.x as usize] & 0x80000000) > 0 {
+    while let Some(PositionRisk { pos, risk }) = to_visit.pop() {
+        if (risks[pos.y][pos.x] & 0x80000000) > 0 {
             continue;
         }
-        risks[pos.y as usize][pos.x as usize] |= 0x80000000;
+        risks[pos.y][pos.x] |= 0x80000000;
 
-        for (npos, height) in around(map, pos, max_x, max_y) {
+        for (npos, height) in neighbors(map, pos, max_x, max_y) {
             let n = risk + height as u32;
-            if n < (risks[npos.y as usize][npos.x as usize] & 0x7fffffff) {
-                risks[npos.y as usize][npos.x as usize] &= 0x80000000;
-                risks[npos.y as usize][npos.x as usize] |= n;
-                to_visit.push(PositionRisk{ pos: npos, risk: n });
+            if n < (risks[npos.y][npos.x] & 0x7fffffff) {
+                risks[npos.y][npos.x] &= 0x80000000;
+                risks[npos.y][npos.x] |= n;
+                to_visit.push(PositionRisk { pos: npos, risk: n });
             }
         }
     }
     (risks[max_y][max_x] & 0x7fffffff) as u16
 }
 
-fn shortest_path_pathfinding(map: &Map) -> u16 {
-    let max_x = map[0].len() - 1;
-    let max_y = map.len() - 1;
+fn multiply_map(map: &Map, factor: usize) -> Map {
+    let (len_x, len_y) = (map[0].len(), map.len());
+    let mut m = map.clone();
+    m.resize(len_y * factor, Vec::new());
+    m.iter_mut().for_each(|x| x.resize(len_x * factor, 0));
 
-    let entrance = Pos { x: 0, y: 0 };
-    let exit = Pos { x: max_x as u16, y: max_y as u16 };
+    for y in 0..factor * len_y {
+        for x in 0..factor * len_x {
+            m[y][x] = (map[y % len_y][x % len_x] - 1 + (y / len_y + x / len_x) as u16) % 9 + 1;
+        }
+    }
+    m
+}
 
-    dijkstra(&entrance, |p| around(map, *p, max_x, max_y), |p| *p == exit).unwrap().1
+fn map_from_stdin() -> Map {
+    io::stdin()
+        .lock()
+        .lines()
+        .flatten()
+        .map(|line| line.bytes().map(|b| (b - b'0') as u16).collect::<Vec<_>>())
+        .collect()
 }
 
 fn main() {
     let map = map_from_stdin();
-    let map5 = larger_map(&map);
+    let map5 = multiply_map(&map, 5);
 
     let now = Instant::now();
-    let res = shortest_path_pathfinding(&map);
+    let res = dijkstra(&map);
     let elapsed = now.elapsed();
-    println!("part1: {} (crate 'pathfinding', {:?})", res, elapsed);
+    println!("part1: {} ({:?})", res, elapsed);
 
     let now = Instant::now();
-    let res = my_dijkstra(&map);
+    let res = dijkstra(&map5);
     let elapsed = now.elapsed();
-    println!("part1: {} (my_dijkstra, {:?})", res, elapsed);
-
-    let now = Instant::now();
-    let res = shortest_path_pathfinding(&map5);
-    let elapsed = now.elapsed();
-    println!("part2: {} (crate 'pathfinding', {:?}))", res, elapsed);
-
-    let now = Instant::now();
-    let p2 = my_dijkstra(&map5);
-    let elapsed = now.elapsed();
-    println!("part2: {} (my_dijkstra, {:?})", p2, elapsed);
+    println!("part2: {} ({:?})", res, elapsed);
 }
