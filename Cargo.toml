@@ -32,3 +32,7 @@ members = [
   "day-14",
   "day-15",
 ]
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
