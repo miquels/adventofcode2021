@@ -56,30 +56,30 @@ fn around(map: &Map, p: Pos, max_x: usize, max_y: usize) -> impl Iterator<Item=(
         .map(|(x, y)| (Pos { x: x as u16, y: y as u16 }, map[y as usize][x as usize]))
 }
 
-struct Visit {
+struct PositionRisk {
     pos: Pos,
     risk: u32,
 }
 
-impl Ord for Visit {
+impl Ord for PositionRisk {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         other.risk.cmp(&self.risk)
     }
 }
 
-impl PartialOrd for Visit {
+impl PartialOrd for PositionRisk {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl PartialEq for Visit {
+impl PartialEq for PositionRisk {
     fn eq(&self, other: &Self) -> bool {
         self.risk.eq(&other.risk)
     }
 }
 
-impl Eq for Visit {}
+impl Eq for PositionRisk {}
 
 fn my_dijkstra(map: &Map) -> u16 {
     let max_x = map[0].len() - 1;
@@ -93,9 +93,9 @@ fn my_dijkstra(map: &Map) -> u16 {
     risks[0][0] = 0;
 
     let mut to_visit = std::collections::BinaryHeap::new();
-    to_visit.push(Visit{ pos: Pos{ x: 0, y: 0 }, risk: 0 });
+    to_visit.push(PositionRisk{ pos: Pos{ x: 0, y: 0 }, risk: 0 });
 
-    while let Some(Visit{ pos, risk}) = to_visit.pop() {
+    while let Some(PositionRisk{ pos, risk}) = to_visit.pop() {
         if (risks[pos.y as usize][pos.x as usize] & 0x80000000) > 0 {
             continue;
         }
@@ -106,7 +106,7 @@ fn my_dijkstra(map: &Map) -> u16 {
             if n < (risks[npos.y as usize][npos.x as usize] & 0x7fffffff) {
                 risks[npos.y as usize][npos.x as usize] &= 0x80000000;
                 risks[npos.y as usize][npos.x as usize] |= n;
-                to_visit.push(Visit{ pos: npos, risk: n });
+                to_visit.push(PositionRisk{ pos: npos, risk: n });
             }
         }
     }
@@ -135,7 +135,7 @@ fn main() {
     let now = Instant::now();
     let res = my_dijkstra(&map);
     let elapsed = now.elapsed();
-    println!("part1 {} (my_dijkstra, {:?})", res, elapsed);
+    println!("part1: {} (my_dijkstra, {:?})", res, elapsed);
 
     let now = Instant::now();
     let res = shortest_path_pathfinding(&map5);
