@@ -238,68 +238,6 @@ impl Packet {
         sum
     }
 
-    fn value2(&self, mut indent: usize) -> u64 {
-        let s = std::iter::repeat(' ').take(indent).collect::<String>();
-        indent += 4;
-
-        match &self.data {
-            PacketData::Literal(lit) => {
-                println!("{}| literal: {}", s, lit);
-                *lit
-            },
-            PacketData::Packets(packets) => {
-                match self.type_id {
-                    Packet::SUM =>  {
-                        println!("{}|SUM: ", s);
-                        let v = packets.iter().map(|p| p.value2(indent)).sum();
-                        println!("{}+- {}", s, v);
-                        v
-                    },
-                    Packet::PRODUCT => {
-                        println!("{}|PRODUCT: ", s);
-                        let v = packets.iter().map(|p| p.value2(indent)).product::<u64>();
-                        println!("{}+- {}", s, v);
-                        v
-                    },
-                    Packet::MINIMUM => {
-                        println!("{}|MINIMUM: ", s);
-                        let v = packets.iter().map(|p| p.value2(indent)).min().unwrap_or(0);
-                        println!("{}+- {}", s, v);
-                        v
-                    },
-                    Packet::MAXIMUM => {
-                        println!("{}|MAXIMUM: ", s);
-                        let v = packets.iter().map(|p| p.value2(indent)).max().unwrap_or(0);
-                        println!("{}+- {}", s, v);
-                        v
-                    },
-                    Packet::GREATER => {
-                        println!("{}|GREATER: ", s);
-                        let v = (packets[0].value2(indent) > packets[1].value2(indent)) as u64;
-                        println!("{}+- {}", s, v);
-                        v
-                    },
-                    Packet::LESS => {
-                        println!("{}|LESS: ", s);
-                        let v = (packets[0].value2(indent) < packets[1].value2(indent)) as u64;
-                        println!("{}+- {}", s, v);
-                        v
-                    },
-                    Packet::EQUAL => {
-                        println!("{}|EQUAL: ", s);
-                        let v = (packets[0].value2(indent) == packets[1].value2(indent)) as u64;
-                        println!("{}+- {}", s, v);
-                        v
-                    },
-                    other => {
-                        println!("unknown packet type {},skipping", other);
-                        0
-                    },
-                }
-            }
-        }
-    }
-
     fn value(&self) -> u64 {
         match &self.data {
             PacketData::Literal(lit) => *lit,
