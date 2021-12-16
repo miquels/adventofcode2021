@@ -32,6 +32,7 @@ members = [
   "day-14",
   "day-15/idiomatic",
   "day-15/golf",
+  "day-16",
 ]
 
 [profile.release]
