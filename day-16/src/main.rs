@@ -3,148 +3,76 @@ use std::io::{self, Read};
 struct Bitstream {
     nibble: u8,
     npos:   u8,
-    buffer: String,
-    eof:    bool,
+    bits_read: u32,
 }
 
 impl Bitstream {
     fn new() -> Bitstream {
-        Bitstream{ nibble: 0, npos: 0, buffer: String::new(), eof: false }
+        Bitstream{ nibble: 0, npos: 0, bits_read: 0 }
     }
 
-    fn eof(&mut self) -> io::Result<bool> {
-        self.fill_buffer()?;
-        Ok(self.eof && self.buffer.len() < 2)
-    }
-
-    fn fill_buffer(&mut self) -> io::Result<()> {
-        if !self.eof {
+    fn read_bit(&mut self) -> io::Result<bool> {
+        if self.npos == 0 {
             let mut buf = [0u8; 1];
-            while self.buffer.len() < 4 {
+            loop {
                 if io::stdin().read(&mut buf)? == 0 {
-                    self.eof = true;
+                    return Err(io::ErrorKind::UnexpectedEof.into());
+                }
+                if buf[0] != b'\n' {
                     break;
                 }
-                if buf[0] == b'\n' {
-                    continue;
-                }
-                self.buffer.push(buf[0] as char);
             }
-        }
-        Ok(())
-    }
-
-    fn read_bit(&mut self) -> io::Result<Option<bool>> {
-        if self.npos == 0 {
-            self.fill_buffer()?;
-            if self.buffer.len() == 0 {
-                return Ok(None);
-            }
-            let ns = &self.buffer[..1];
-            self.nibble = u8::from_str_radix(ns, 16)
+            let ns = String::from(buf[0] as char);
+            self.nibble = u8::from_str_radix(&ns, 16)
                 .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("{}: {}", ns, e)))?;
             self.npos = 1 << 3;
-            self.buffer.remove(0);
         }
         let b = (self.nibble & self.npos) > 0;
         self.npos >>= 1;
-        Ok(Some(b))
+        self.bits_read += 1;
+        Ok(b)
     }
 
-    fn read_bits(&mut self, num_bits: u8) -> io::Result<Option<u32>> {
+    fn read_bits(&mut self, num_bits: u8) -> io::Result<u32> {
         let mut n = 0;
-        for x in 0 .. num_bits {
-            let b = match self.read_bit()? {
-                Some(b) => b,
-                None => {
-                    if x == 0 {
-                        return Ok(None);
-                    }
-                    return Err(io::ErrorKind::UnexpectedEof.into());
-                }
-            };
+        for _ in 0 .. num_bits {
+            let b = self.read_bit()?;
             n = (n << 1) | (b as u32);
         }
-        Ok(Some(n))
+        Ok(n)
     }
 }
 
 struct PacketReader<'a> {
-    nbits:      Option<u32>,
     stream:     &'a mut Bitstream,
-    bits_read:  u32,
-    eof_ok:      bool,
 }
 
 impl<'a> PacketReader<'a> {
     fn new<'s>(stream: &'s mut Bitstream) -> PacketReader<'s> {
-        PacketReader {
-            nbits:      None,
-            stream,
-            bits_read:  0,
-            eof_ok:      true,
-        }
+        PacketReader { stream }
     }
 
-    fn limit_bits<'b>(&'b mut self, limit: u32) -> PacketReader<'b> {
-        PacketReader {
-            nbits:      Some(limit),
-            stream:     self.stream,
-            bits_read:  0,
-            eof_ok:     true,
-        }
-    }
-
-    fn read_bits(&mut self, num_bits: u8) -> io::Result<u32> {
-        match self.nbits {
-            Some(0) => return Err(io::ErrorKind::UnexpectedEof.into()),
-            Some(ref mut n) => {
-                if *n < num_bits as u32 {
-                    return Err(io::ErrorKind::UnexpectedEof.into());
-                }
-                *n -= num_bits as u32;
-            },
-            None => {},
-        }
-        let n = match self.stream.read_bits(num_bits)? {
-            Some(n) => {
-                self.bits_read += num_bits as u32;
-                n
-            },
-            None => return Err(io::ErrorKind::UnexpectedEof.into()),
-        };
-        Ok(n)
-    }
-
-    fn eof(&mut self) -> io::Result<bool> {
-        if self.nbits == Some(0) {
-            return Ok(true);
-        }
-        self.stream.eof()
-    }
-
-    fn read_packet(&mut self) -> io::Result<Option<Packet>> {
-        if self.eof_ok && self.eof()? {
-            return Ok(None);
-        }
-        let version = self.read_bits(3)? as u8;
-        let type_id = self.read_bits(3)? as u8;
+    fn read_packet(&mut self) -> io::Result<Packet> {
+        let version = self.stream.read_bits(3)? as u8;
+        let type_id = self.stream.read_bits(3)? as u8;
         match type_id {
             Packet::LITERAL => {
                 let literal = self.read_literal()?;
-                Ok(Some(Packet {
+                Ok(Packet {
                     version,
                     type_id,
-                    data: PacketData::Literal(literal),
-                }))
+                    literal,
+                    subpackets: Vec::new(),
+                })
             },
             _ => {
-                let packets = self.read_subpackets()?;
-                Ok(Some(Packet {
+                let subpackets = self.read_subpackets()?;
+                Ok(Packet {
                     version,
                     type_id,
-                    data: PacketData::Packets(packets),
-                }))
+                    literal: 0,
+                    subpackets,
+                })
             }
         }
     }
@@ -152,66 +80,41 @@ impl<'a> PacketReader<'a> {
     fn read_literal(&mut self) -> io::Result<u64> {
         let mut val = 0;
         while {
-            let last = self.read_bits(1)? == 0;
-            val = (val << 4) | (self.read_bits(4)? as u64);
+            let last = self.stream.read_bits(1)? == 0;
+            val = (val << 4) | (self.stream.read_bits(4)? as u64);
             !last
         } {}
         Ok(val)
     }
 
-    fn read_packets(&mut self, amount: Option<u32>) -> io::Result<Vec<Packet>> {
-        let mut pv = Vec::new();
-        if let Some(amount) = amount {
-            for _ in 0 .. amount {
-                match self.read_packet()? {
-                    Some(p) => pv.push(p),
-                    None => return Err(io::ErrorKind::UnexpectedEof.into()),
-                }
-            }
-        } else {
-            while let Some(p) = self.read_packet()? {
-                pv.push(p);
-            }
-        }
-        Ok(pv)
-    }
-
     fn read_subpackets(&mut self) -> io::Result<Vec<Packet>> {
-        match self.read_bits(1)? != 0 {
+        let mut packets = Vec::new();
+        match self.stream.read_bits(1)? != 0 {
             false => {
-                let limit = self.read_bits(15)?;
-                let mut reader = self.limit_bits(limit);
-                let packets = reader.read_packets(None)?;
-                let bits_read = reader.bits_read;
-                if bits_read != limit {
-                    println!("read_subpacket: needed {} bits, got {} bits", limit, bits_read);
-                    return Err(io::ErrorKind::UnexpectedEof.into());
-                }
-                self.bits_read += bits_read;
-                if let Some(ref mut nbits) = self.nbits {
-                    *nbits -= bits_read;
+                let nbits = self.stream.read_bits(15)?;
+                let goal = self.stream.bits_read + nbits;
+                while self.stream.bits_read != goal {
+                    packets.push(self.read_packet()?);
                 }
                 Ok(packets)
             },
             true => {
-                let limit = self.read_bits(11)?;
-                self.read_packets(Some(limit))
+                let npackets = self.stream.read_bits(11)?;
+                for _ in 0 .. npackets {
+                    packets.push(self.read_packet()?);
+                }
+                Ok(packets)
             }
         }
     }
 }
 
 #[derive(Debug)]
-enum PacketData {
-    Literal(u64),
-    Packets(Vec<Packet>),
-}
-
-#[derive(Debug)]
 struct Packet {
-    version:   u8,
-    type_id:   u8,
-    data:      PacketData,
+    version:    u8,
+    type_id:    u8,
+    literal:    u64,
+    subpackets: Vec<Packet>,
 }
 
 impl Packet {
@@ -227,35 +130,27 @@ impl Packet {
     fn version_sum(&self) -> u32 {
         let mut sum = 0;
         sum += self.version as u32;
-        match self.data {
-            PacketData::Literal(_) => {},
-            PacketData::Packets(ref packets) => {
-                for packet in packets {
-                    sum += packet.version_sum();
-                }
-            }
+        for packet in &self.subpackets {
+            sum += packet.version_sum();
         }
         sum
     }
 
     fn value(&self) -> u64 {
-        match &self.data {
-            PacketData::Literal(lit) => *lit,
-            PacketData::Packets(packets) => {
-                match self.type_id {
-                    Packet::SUM => packets.iter().map(|p| p.value()).sum(),
-                    Packet::PRODUCT => packets.iter().map(|p| p.value()).product::<u64>(),
-                    Packet::MINIMUM => packets.iter().map(|p| p.value()).min().unwrap_or(0),
-                    Packet::MAXIMUM => packets.iter().map(|p| p.value()).max().unwrap_or(0),
-                    Packet::GREATER => (packets[0].value() > packets[1].value()) as u64,
-                    Packet::LESS => (packets[0].value() < packets[1].value()) as u64,
-                    Packet::EQUAL => (packets[0].value() == packets[1].value()) as u64,
-                    other => {
-                        println!("unknown packet type {},skipping", other);
-                        0
-                    },
-                }
-            }
+        let packets = &self.subpackets;
+        match self.type_id {
+            Packet::SUM => packets.iter().map(|p| p.value()).sum(),
+            Packet::PRODUCT => packets.iter().map(|p| p.value()).product::<u64>(),
+            Packet::MINIMUM => packets.iter().map(|p| p.value()).min().unwrap_or(0),
+            Packet::MAXIMUM => packets.iter().map(|p| p.value()).max().unwrap_or(0),
+            Packet::LITERAL => self.literal,
+            Packet::GREATER => (packets[0].value() > packets[1].value()) as u64,
+            Packet::LESS => (packets[0].value() < packets[1].value()) as u64,
+            Packet::EQUAL => (packets[0].value() == packets[1].value()) as u64,
+            other => {
+                println!("unknown packet type {},skipping", other);
+                0
+            },
         }
     }
 }
@@ -263,7 +158,7 @@ impl Packet {
 fn main() -> io::Result<()> {
     let mut stream = Bitstream::new();
     let mut reader = PacketReader::new(&mut stream);
-    let packet = reader.read_packet()?.unwrap();
+    let packet = reader.read_packet()?;
     println!("version_sum: {}", packet.version_sum());
     println!("value: {}", packet.value());
 
