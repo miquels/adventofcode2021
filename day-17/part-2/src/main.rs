@@ -1,3 +1,4 @@
+use std::time::Instant;
 use std::collections::HashMap;
 use scan_fmt::*;
 
@@ -69,6 +70,8 @@ fn main() {
     let (min_x, max_x, min_y, max_y) = scanln_fmt!("target area: x={}..{}, y={}..{}",
         i32, i32, i32, i32).unwrap();
 
+    let start = Instant::now();
+
     // find possible steps on the x axis
     let mut h  = Horizontal::new(min_x, max_x);
     h.calc();
@@ -104,6 +107,6 @@ fn main() {
     xyspeeds.sort();
     xyspeeds.dedup();
 
-    println!("{}", xyspeeds.len());
+    println!("{} ({:?})", xyspeeds.len(), start.elapsed());
 }
 
