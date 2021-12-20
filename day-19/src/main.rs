@@ -5,7 +5,7 @@ use std::collections::{HashMap, HashSet};
 use std::io::{self, BufRead};
 use scan_fmt::scan_fmt;
 
-// https://www.titanwolf.org/Network/q/805a36d1-5c4d-4df0-ac03-4c4911d4b133/y
+// https://www.euclideanspace.com/maths/algebra/matrix/transforms/examples/
 const MATRIX: [[[i32; 3]; 3]; 24] = [
     [ [ 1, 0, 0 ], [ 0, 1, 0 ], [ 0, 0, 1 ], ],
     [ [ 1, 0, 0 ], [ 0, 0,-1 ], [ 0, 1, 0 ], ],
