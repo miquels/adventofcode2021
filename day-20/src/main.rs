@@ -12,28 +12,27 @@ impl Enhancer {
     }
 
     fn enhance1(&self, img: &Image, step: u32) -> Image {
-        let dfl = if self.algo[0] { (step & 1) != 0 } else { false };
-        let len_x = img.len_x;
-        let len_y = img.len_y;
-        let mut px = (0..len_y + 2)
-            .map(|_| { let mut x = Vec::new(); x.resize((len_x + 2) as usize, false); x })
-            .collect::<Vec<_>>();
-        for y in 0i32 .. len_y + 2 {
-            for x in 0 .. len_x + 2 {
+        let (mut px, len_x, len_y) = (Vec::new(), img.len_x + 2, img.len_y + 2);
+        px.resize_with(len_y as usize, || {
+            let mut x = Vec::new(); x.resize((len_x) as usize, false); x
+        });
+        let inf = if self.algo[0] { (step & 1) != 0 } else { false };
+        for y in 0 .. len_y {
+            for x in 0 .. len_x {
                 let index =
-                    ((img.pixel_at(x - 2, y - 2, dfl) as u16) << 8) |
-                    ((img.pixel_at(x - 1, y - 2, dfl) as u16) << 7) |
-                    ((img.pixel_at(x - 0, y - 2, dfl) as u16) << 6) |
-                    ((img.pixel_at(x - 2, y - 1, dfl) as u16) << 5) |
-                    ((img.pixel_at(x - 1, y - 1, dfl) as u16) << 4) |
-                    ((img.pixel_at(x - 0, y - 1, dfl) as u16) << 3) |
-                    ((img.pixel_at(x - 2, y - 0, dfl) as u16) << 2) |
-                    ((img.pixel_at(x - 1, y - 0, dfl) as u16) << 1) |
-                    ((img.pixel_at(x - 0, y - 0, dfl) as u16));
+                    ((img.pixel_at(x - 2, y - 2, inf) as u16) << 8) |
+                    ((img.pixel_at(x - 1, y - 2, inf) as u16) << 7) |
+                    ((img.pixel_at(x - 0, y - 2, inf) as u16) << 6) |
+                    ((img.pixel_at(x - 2, y - 1, inf) as u16) << 5) |
+                    ((img.pixel_at(x - 1, y - 1, inf) as u16) << 4) |
+                    ((img.pixel_at(x - 0, y - 1, inf) as u16) << 3) |
+                    ((img.pixel_at(x - 2, y - 0, inf) as u16) << 2) |
+                    ((img.pixel_at(x - 1, y - 0, inf) as u16) << 1) |
+                    ((img.pixel_at(x - 0, y - 0, inf) as u16));
                 px[y as usize][x as usize] = self.algo[index as usize];
             }
         }
-        Image { pixels: px, len_x: len_x + 2, len_y: len_y + 2 }
+        Image { pixels: px, len_x, len_y }
     }
 
     fn enhance(&self, mut img: Image, steps: u32) -> Image {
@@ -44,7 +43,6 @@ impl Enhancer {
     }
 }
 
-#[derive(Default)]
 struct Image {
     pixels: Vec<Vec<bool>>,
     len_x: i32,
@@ -64,25 +62,16 @@ impl Image {
     }
 
     #[inline]
-    fn pixel_at(&self, x: i32, y: i32, dfl: bool) -> bool {
+    fn pixel_at(&self, x: i32, y: i32, inf: bool) -> bool {
         if x >= 0 && x < self.len_x && y >= 0 && y < self.len_y {
             self.pixels[y as usize][x as usize]
         } else {
-            dfl
+            inf
         }
     }
 
     fn pixels_lit(&self) -> usize {
         self.pixels.iter().map(|x| x.iter().filter(|p| **p).count()).sum()
-    }
-
-    #[allow(dead_code)]
-    fn print(&self) {
-        for y in 0 .. self.len_y as usize {
-            let x = self.pixels[y].iter().map(|p| if *p { '#' } else { '.' }).collect::<String>();
-            println!("{}", x);
-        }
-        println!("");
     }
 }
 
