@@ -1,42 +1,39 @@
-use std::ops::DerefMut;
 use std::cell::RefCell;
-use std::fmt;
 use std::collections::{HashMap, HashSet};
+use std::fmt;
 use std::io::{self, BufRead};
+use std::ops::DerefMut;
+use once_cell::sync::OnceCell;
 use scan_fmt::scan_fmt;
 
-// https://www.euclideanspace.com/maths/algebra/matrix/transforms/examples/
-const MATRIX: [[[i32; 3]; 3]; 24] = [
-    [ [ 1, 0, 0 ], [ 0, 1, 0 ], [ 0, 0, 1 ], ],
-    [ [ 1, 0, 0 ], [ 0, 0,-1 ], [ 0, 1, 0 ], ],
-    [ [ 1, 0, 0 ], [ 0,-1, 0 ], [ 0, 0,-1 ], ],
-    [ [ 1, 0, 0 ], [ 0, 0, 1 ], [ 0,-1, 0 ], ],
+fn rotation_matrices() -> Vec<[[i32; 3]; 3]> {
+    fn to_matrix(rot: [(char, i32); 3]) -> [[i32; 3]; 3] {
+        let h = |a: (char, i32), b| (a.0 == b).then(|| a.1).unwrap_or(0);
+        [ [ h(rot[0], 'x'), h(rot[1], 'x'), h(rot[2], 'x') ],
+          [ h(rot[0], 'y'), h(rot[1], 'y'), h(rot[2], 'y') ],
+          [ h(rot[0], 'z'), h(rot[1], 'z'), h(rot[2], 'z') ] ]
+    }
+    let m = [ "xyz", "yxz", "xzy", "zxy", "yzx", "zyx" ]
+        .into_iter()
+        .enumerate()
+        .map(|(i, s)| (i, s.chars().collect::<Vec<_>>()))
+        .map(|(i, s)| {
+            let z = (s[2], 1 - 2 * ((i as i32 & 1) ^ ((s[2] == 'y') as i32)) );
+            [ [ (s[0], 1), (s[1], 1), z ],
+              [ (s[1],-1), (s[0], 1), z ],
+              [ (s[0],-1), (s[1],-1), z ],
+              [ (s[1], 1), (s[0],-1), z ], ].into_iter()
+        })
+        .flatten()
+        .map(to_matrix)
+        .collect::<Vec<_>>();
+    m
+}
 
-    [ [ 0,-1, 0 ], [ 1, 0, 0 ], [ 0, 0, 1 ], ],
-    [ [ 0, 0, 1 ], [ 1, 0, 0 ], [ 0, 1, 0 ], ],
-    [ [ 0, 1, 0 ], [ 1, 0, 0 ], [ 0, 0,-1 ], ],
-    [ [ 0, 0,-1 ], [ 1, 0, 0 ], [ 0,-1, 0 ], ],
-
-    [ [-1, 0, 0 ], [ 0,-1, 0 ], [ 0, 0, 1 ], ],
-    [ [-1, 0, 0 ], [ 0, 0,-1 ], [ 0,-1, 0 ], ],
-    [ [-1, 0, 0 ], [ 0, 1, 0 ], [ 0, 0,-1 ], ],
-    [ [-1, 0, 0 ], [ 0, 0, 1 ], [ 0, 1, 0 ], ],
-
-    [ [ 0, 1, 0 ], [-1, 0, 0 ], [ 0, 0, 1 ], ],
-    [ [ 0, 0, 1 ], [-1, 0, 0 ], [ 0,-1, 0 ], ],
-    [ [ 0,-1, 0 ], [-1, 0, 0 ], [ 0, 0,-1 ], ],
-    [ [ 0, 0,-1 ], [-1, 0, 0 ], [ 0, 1, 0 ], ],
-
-    [ [ 0, 0,-1 ], [ 0, 1, 0 ], [ 1, 0, 0 ], ],
-    [ [ 0, 1, 0 ], [ 0, 0, 1 ], [ 1, 0, 0 ], ],
-    [ [ 0, 0, 1 ], [ 0,-1, 0 ], [ 1, 0, 0 ], ],
-    [ [ 0,-1, 0 ], [ 0, 0,-1 ], [ 1, 0, 0 ], ],
-
-    [ [ 0, 0,-1 ], [ 0,-1, 0 ], [-1, 0, 0 ], ],
-    [ [ 0,-1, 0 ], [ 0, 0, 1 ], [-1, 0, 0 ], ],
-    [ [ 0, 0, 1 ], [ 0, 1, 0 ], [-1, 0, 0 ], ],
-    [ [ 0, 1, 0 ], [ 0, 0,-1 ], [-1, 0, 0 ], ],
-];
+fn rotation_matrix(n: usize) -> &'static [[i32; 3]; 3] {
+    static ROTATIONS: OnceCell<Vec<[[i32; 3]; 3]>> = OnceCell::new();
+    &ROTATIONS.get_or_init(rotation_matrices)[n]
+}
 
 #[derive(Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Copy)]
 struct Pos {
@@ -47,7 +44,7 @@ struct Pos {
 
 impl Pos {
     fn rotate(&self, n: usize) -> Pos {
-        let m = &MATRIX[n];
+        let m = rotation_matrix(n);
         Pos {
             x: m[0][0] * self.x + m[0][1] * self.y + m[0][2] * self.z,
             y: m[1][0] * self.x + m[1][1] * self.y + m[1][2] * self.z,
