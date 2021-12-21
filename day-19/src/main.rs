@@ -1,55 +1,48 @@
+use scan_fmt::scan_fmt;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::io::{self, BufRead};
 use std::ops::DerefMut;
-use once_cell::sync::OnceCell;
-use scan_fmt::scan_fmt;
-
-fn rotation_matrices() -> Vec<[[i32; 3]; 3]> {
-    fn to_matrix(rot: [(char, i32); 3]) -> [[i32; 3]; 3] {
-        let h = |a: (char, i32), b| (a.0 == b).then(|| a.1).unwrap_or(0);
-        [ [ h(rot[0], 'x'), h(rot[1], 'x'), h(rot[2], 'x') ],
-          [ h(rot[0], 'y'), h(rot[1], 'y'), h(rot[2], 'y') ],
-          [ h(rot[0], 'z'), h(rot[1], 'z'), h(rot[2], 'z') ] ]
-    }
-    let m = [ "xyz", "yxz", "xzy", "zxy", "yzx", "zyx" ]
-        .into_iter()
-        .enumerate()
-        .map(|(i, s)| (i, s.chars().collect::<Vec<_>>()))
-        .map(|(i, s)| {
-            let z = (s[2], 1 - 2 * ((i as i32 & 1) ^ ((s[2] == 'y') as i32)) );
-            [ [ (s[0], 1), (s[1], 1), z ],
-              [ (s[1],-1), (s[0], 1), z ],
-              [ (s[0],-1), (s[1],-1), z ],
-              [ (s[1], 1), (s[0],-1), z ], ].into_iter()
-        })
-        .flatten()
-        .map(to_matrix)
-        .collect::<Vec<_>>();
-    m
-}
-
-fn rotation_matrix(n: usize) -> &'static [[i32; 3]; 3] {
-    static ROTATIONS: OnceCell<Vec<[[i32; 3]; 3]>> = OnceCell::new();
-    &ROTATIONS.get_or_init(rotation_matrices)[n]
-}
 
 #[derive(Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Copy)]
 struct Pos {
-    x:  i32,
-    y:  i32,
-    z:  i32,
+    x: i32,
+    y: i32,
+    z: i32,
 }
 
 impl Pos {
     fn rotate(&self, n: usize) -> Pos {
-        let m = rotation_matrix(n);
-        Pos {
-            x: m[0][0] * self.x + m[0][1] * self.y + m[0][2] * self.z,
-            y: m[1][0] * self.x + m[1][1] * self.y + m[1][2] * self.z,
-            z: m[2][0] * self.x + m[2][1] * self.y + m[2][2] * self.z,
-        }
+        let (x, y, z) = (self.x, self.y, self.z);
+        let (x, y, z) = match n {
+            0 => (x, y, z),
+            1 => (-y, x, z),
+            2 => (-x, -y, z),
+            3 => (y, -x, z),
+            4 => (x, z, -y),
+            5 => (-z, x, -y),
+            6 => (-x, -z, -y),
+            7 => (z, -x, -y),
+            8 => (y, x, -z),
+            9 => (-x, y, -z),
+            10 => (-y, -x, -z),
+            11 => (x, -y, -z),
+            12 => (z, x, y),
+            13 => (-x, z, y),
+            14 => (-z, -x, y),
+            15 => (x, -z, y),
+            16 => (z, y, -x),
+            17 => (-y, z, -x),
+            18 => (-z, -y, -x),
+            19 => (y, -z, -x),
+            20 => (y, z, x),
+            21 => (-z, y, x),
+            22 => (-y, -z, x),
+            23 => (z, -y, x),
+            _ => unreachable!(),
+        };
+        Pos { x, y, z }
     }
 
     fn sub(&self, other: &Pos) -> Pos {
@@ -82,9 +75,9 @@ impl fmt::Display for Pos {
 
 #[derive(Debug)]
 struct Scanner {
-    beacons:    Vec<Pos>,
-    id:         usize,
-    position:   Pos,
+    beacons: Vec<Pos>,
+    id: usize,
+    position: Pos,
 }
 
 impl Scanner {
@@ -99,14 +92,12 @@ impl Scanner {
     fn normalize(&self, other: &mut Scanner) -> Vec<usize> {
         let mut m = HashMap::<Pos, (usize, u32)>::new();
 
-        for b1 in 0 .. other.beacons.len() {
-            for r1 in 0 .. 24 {
+        for b1 in 0..other.beacons.len() {
+            for r1 in 0..24 {
                 let rbeacon = other.beacons[b1].rotate(r1);
-                for b in 0 .. self.beacons.len() {
+                for b in 0..self.beacons.len() {
                     let distance = self.beacons[b].sub(&rbeacon);
-                    m.entry(distance)
-                        .and_modify(|e| e.1 += 1)
-                        .or_insert((r1, 1u32));
+                    m.entry(distance).and_modify(|e| e.1 += 1).or_insert((r1, 1u32));
                 }
             }
         }
@@ -148,7 +139,7 @@ impl Scanners {
                 continue;
             }
             if let Ok((x, y, z)) = scan_fmt!(&line, "{},{},{}", i32, i32, i32) {
-                scanner.beacons.push(Pos{ x, y, z });
+                scanner.beacons.push(Pos { x, y, z });
             }
         }
         scanners.push(RefCell::new(scanner));
@@ -159,7 +150,7 @@ impl Scanners {
     fn normalize1(&self, start_id: usize, done: &mut HashSet<usize>) {
         done.insert(start_id);
 
-        for scanner_id in 0 .. self.scanners.len() {
+        for scanner_id in 0..self.scanners.len() {
             if done.contains(&scanner_id) {
                 continue;
             }
@@ -204,8 +195,8 @@ impl Scanners {
 
     fn max_manhattan(&self) -> u32 {
         let mut max = 0;
-        for s1 in 0 .. self.scanners.len() {
-            for s2 in s1 + 1 .. self.scanners.len() {
+        for s1 in 0..self.scanners.len() {
+            for s2 in s1 + 1..self.scanners.len() {
                 let p1 = self.scanners[s1].borrow().position;
                 let p2 = self.scanners[s2].borrow().position;
                 let m = p1.manhattan(&p2);
