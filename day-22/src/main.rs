@@ -11,7 +11,6 @@ struct Cuboid {
     z2:  i64,
     on: bool,
     removed: Vec<Cuboid>,
-    deleted: bool,
 }
 
 impl Cuboid {
