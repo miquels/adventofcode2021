@@ -43,6 +43,7 @@ members = [
   "day-23",
   "day-24/part-1",
   "day-24/part-2",
+  "day-25",
 ]
 
 [profile.release]
