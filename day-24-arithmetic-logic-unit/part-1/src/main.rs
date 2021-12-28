@@ -351,6 +351,7 @@ fn main() {
     //solve2(&mut alu);
 }
 
+#[allow(dead_code)]
 fn solve2(alu: &mut ALU) {
     let mut idx = 0;
     alu.input.fill(0);
