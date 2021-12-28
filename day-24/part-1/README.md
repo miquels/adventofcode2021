@@ -3,8 +3,9 @@
 The idea was to build an ALU that can work with ranges as well as discrete numbers.
 Inputs that are not set have the value "1..9".
 
-This idea worked at first for calculating the highest model number. However,
-the algorithm did not implement all the arithmetic correctly.
+This idea worked at first for calculating the highest model number.
+
+However, the algorithm did not implement all the arithmetic correctly.
 
 The problem is range multiplications.
 
@@ -22,11 +23,13 @@ This is not correct. The right solution is:
                      [14, 16, 18, 21, 24, 27, 28, 32, 36]
 ```
 
-Ofcourse there are short solutions for [0..0], [0..1] and [1..1].
+Ofcourse there are short solutions for `[0..0], [0..1] and [1..1]`.
 
-But this gets out of hand quickly, if you have ranges like 12000-23000.
+But this gets out of hand quickly, if you have ranges like `12000-23000`.
 
 I've tried to add a few shortcuts to sort of handle this, but it
 makes the calculations too imprecise to get the correct answer.
 
+Perhaps I'll get back to it one day, it is interesting...it works
+for some cases at least!
 
